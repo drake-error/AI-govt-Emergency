@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Shield, FileText, CheckCircle2, ArrowRight } from 'lucide-react';
+import { API_URL } from '@/lib/api';
 
 interface Scheme {
   id: string;
@@ -20,7 +21,7 @@ export default function SchemesPage() {
   useEffect(() => {
     async function fetchSchemes() {
       try {
-        const res = await fetch('http://localhost:8000/api/schemes');
+        const res = await fetch(`${API_URL}/api/schemes`);
         const data = await res.json();
         if (data.success && data.schemes) {
           setSchemes(data.schemes);

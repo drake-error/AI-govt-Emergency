@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { Send, Bot, User, Globe, AlertOctagon } from 'lucide-react';
+import { API_URL } from '@/lib/api';
 
 interface Message {
   sender: 'ai' | 'user';
@@ -38,7 +39,7 @@ export default function MultilingualChat() {
     setIsLoading(true);
 
     try {
-      const res = await fetch('http://localhost:8000/api/chat', {
+      const res = await fetch(`${API_URL}/api/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: textToSend, lang: lang })

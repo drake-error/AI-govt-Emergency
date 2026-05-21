@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { ShieldCheck, ArrowRight, Lock, UserCheck, AlertCircle } from 'lucide-react';
+import { API_URL } from '@/lib/api';
 
 export default function AadhaarVerifier() {
   const [aadhaarNumber, setAadhaarNumber] = useState("");
@@ -21,7 +22,7 @@ export default function AadhaarVerifier() {
     setIsLoading(true);
     
     try {
-      const res = await fetch('http://localhost:8000/api/aadhaar/send-otp', {
+      const res = await fetch(`${API_URL}/api/aadhaar/send-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ aadhaar_number: aadhaarNumber })
@@ -48,7 +49,7 @@ export default function AadhaarVerifier() {
     setIsLoading(true);
 
     try {
-      const res = await fetch('http://localhost:8000/api/aadhaar/verify-otp', {
+      const res = await fetch(`${API_URL}/api/aadhaar/verify-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ref_id: refId, otp: otp })

@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import jsPDF from 'jspdf';
 import { Camera, FileDown, CheckCircle, Clock, ShieldCheck, Landmark, FileText } from 'lucide-react';
+import { API_URL } from '@/lib/api';
 
 export default function WorkforcePayroll() {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -68,7 +69,7 @@ export default function WorkforcePayroll() {
       const hourlyRate = 500;
       const multiplier = 1.5; // Hazard bonus
       
-      const res = await fetch(`http://localhost:8000/api/workforce/payroll`, {
+      const res = await fetch(`${API_URL}/api/workforce/payroll`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

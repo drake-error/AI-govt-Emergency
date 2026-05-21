@@ -105,9 +105,11 @@ export default function RootLayout({
         {/* 4. SCROLLING EMERGENCY NOTICE TICKER */}
         <div className="bg-red-600 text-white text-xs font-bold py-2 px-4 md:px-8 overflow-hidden shadow-sm flex items-center border-b border-red-700">
           <span className="bg-red-800 px-2 py-0.5 rounded text-[10px] tracking-wider uppercase mr-3 shrink-0">CRITICAL UPDATE</span>
-          <marquee className="cursor-pointer" scrollamount="4">
-            ⚠️ CYCLONE WARNING: Red Warning issued for east coastal districts. All SDRF deployment teams reporting status. citizens are advised to utilize the AI Distress Assistant on this portal to share location. Live compensation payroll module initiated for all emergency relief workers.
-          </marquee>
+          <div className="flex-1 overflow-hidden">
+            <span className="ticker-text">
+              ⚠️ CYCLONE WARNING: Red Warning issued for east coastal districts. All SDRF deployment teams reporting status. Citizens are advised to utilize the AI Distress Assistant on this portal to share location. Live compensation payroll module initiated for all emergency relief workers.
+            </span>
+          </div>
         </div>
 
         {/* 5. MAIN CONTENT FRAME */}

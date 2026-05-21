@@ -4,6 +4,7 @@ import dynamic from 'next/dynamic';
 import { useState, useRef, useEffect } from 'react';
 import jsPDF from 'jspdf';
 import { Mic, AlertTriangle, Compass, Camera, FileDown, ShieldAlert, Landmark, FileText, Search, CloudRain } from 'lucide-react';
+import { API_URL } from '@/lib/api';
 
 const CitizenMap = dynamic(() => import('@/components/CitizenMap'), { ssr: false });
 import MultilingualChat from '@/components/MultilingualChat';
@@ -39,7 +40,7 @@ export default function UnifiedGovTechPortal() {
 
   const fetchAreaDetails = async () => {
     try {
-      const res = await fetch(`http://localhost:8000/api/navigator/lookup?district=${searchDistrict}`);
+      const res = await fetch(`${API_URL}/api/navigator/lookup?district=${searchDistrict}`);
       const data = await res.json();
       setLookupResult(data);
       
@@ -59,7 +60,7 @@ export default function UnifiedGovTechPortal() {
   }, []);
 
   const startListening = () => {
-    const SpeechRecognition = window.SpeechRecognition || (window as any).webkitSpeechRecognition;
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SpeechRecognition) return;
 
     const recognition = new SpeechRecognition();
@@ -115,7 +116,7 @@ export default function UnifiedGovTechPortal() {
     setIsCalculating(true);
     try {
       const hoursWorked = workerId === 4021 ? 11.5 : 14.5;
-      const res = await fetch(`http://localhost:8000/api/workforce/payroll`, {
+      const res = await fetch(`${API_URL}/api/workforce/payroll`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
