@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import Link from "next/link";
 import { Shield, Home, Landmark, Users, PhoneCall, Globe, Search, ArrowRight } from "lucide-react";
+import AccessibilityBar from "@/components/AccessibilityBar";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -18,34 +19,15 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="scroll-smooth">
+      <head>
+        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+        <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
+      </head>
       <body className={`${inter.className} bg-slate-50 text-slate-900 min-h-screen flex flex-col`}>
         
         {/* 1. TRICOLOR TOP STRIP & ACCESSIBILITY BAR */}
-        <div className="w-full bg-slate-900 text-slate-300 text-xs py-1.5 px-4 md:px-8 flex flex-wrap justify-between items-center border-t-4 border-amber-500 z-50">
-          <div className="flex items-center space-x-4">
-            <span className="font-semibold tracking-wide text-slate-200 flex items-center">
-              <span className="inline-block w-2.5 h-1.5 bg-amber-500 mr-0.5"></span>
-              <span className="inline-block w-2.5 h-1.5 bg-white mr-0.5"></span>
-              <span className="inline-block w-2.5 h-1.5 bg-emerald-500 mr-1.5"></span>
-              भारत सरकार | GOVERNMENT OF INDIA
-            </span>
-            <span className="text-slate-500 hidden md:inline">|</span>
-            <span className="text-slate-400 hidden md:inline font-mono">Ministry of Home Affairs (MHA)</span>
-          </div>
-          <div className="flex items-center space-x-4 mt-1 sm:mt-0">
-            <Link href="#" className="hover:text-amber-500 transition-colors">Screen Reader Access</Link>
-            <span className="text-slate-700">|</span>
-            <div className="flex space-x-1.5 items-center">
-              <button className="px-1.5 py-0.5 bg-slate-800 rounded hover:bg-slate-700 font-bold">A-</button>
-              <button className="px-1.5 py-0.5 bg-slate-800 rounded hover:bg-slate-700 font-bold">A</button>
-              <button className="px-1.5 py-0.5 bg-slate-800 rounded hover:bg-slate-700 font-bold">A+</button>
-            </div>
-            <span className="text-slate-700">|</span>
-            <button className="px-2 py-0.5 bg-amber-500 text-slate-950 font-bold rounded flex items-center hover:bg-amber-400 transition-all text-[10px]">
-              <Globe className="w-3 h-3 mr-1" /> ENGLISH / हिंदी
-            </button>
-          </div>
-        </div>
+        <AccessibilityBar />
 
         {/* 2. OFFICIAL GOVERNMENT PORTAL BRANDING HEADER */}
         <header className="bg-white border-b border-slate-200 shadow-sm py-4 px-4 md:px-8 z-40">
@@ -107,7 +89,7 @@ export default function RootLayout({
                 <Users className="w-4 h-4 text-green-400" />
                 <span>Workforce & Payroll</span>
               </Link>
-              <Link href="#" className="flex items-center space-x-2 px-5 py-4 hover:bg-slate-800 hover:text-amber-400 border-b-2 border-transparent transition-colors whitespace-nowrap text-slate-400">
+              <Link href="/schemes" className="flex items-center space-x-2 px-5 py-4 hover:bg-slate-800 hover:text-amber-400 border-b-2 border-transparent transition-colors whitespace-nowrap text-slate-400">
                 <Shield className="w-4 h-4" />
                 <span>Ex-Gratia Schemes</span>
               </Link>

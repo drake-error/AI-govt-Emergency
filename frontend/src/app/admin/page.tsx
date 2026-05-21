@@ -23,15 +23,21 @@ export default function AdminDashboard() {
           </p>
         </div>
         
-        <div className="flex space-x-3 w-full md:w-auto">
+        <div className="flex space-x-3 w-full md:w-auto flex-wrap gap-y-3">
           <Link 
             href="/admin/workforce" 
             className="flex-1 text-center bg-amber-500 hover:bg-amber-600 text-slate-950 px-5 py-3 rounded-xl font-extrabold text-xs tracking-wider uppercase flex items-center justify-center transition-all shadow-md shadow-amber-500/10"
           >
-            <Briefcase className="w-4 h-4 mr-2" /> Payroll & Attendance
+            <Briefcase className="w-4 h-4 mr-2" /> Payroll
+          </Link>
+          <Link 
+            href="/admin/schemes" 
+            className="flex-1 text-center bg-emerald-500 hover:bg-emerald-600 text-slate-950 px-5 py-3 rounded-xl font-extrabold text-xs tracking-wider uppercase flex items-center justify-center transition-all shadow-md shadow-emerald-500/10"
+          >
+            <Landmark className="w-4 h-4 mr-2" /> Relief Schemes
           </Link>
           <button className="bg-slate-800 border border-slate-700 hover:bg-slate-700 text-white px-4 py-3 rounded-xl font-bold text-xs flex items-center justify-center transition-all">
-             <DownloadCloud className="w-4 h-4 mr-2" /> export logs
+             <DownloadCloud className="w-4 h-4 mr-2" /> export
           </button>
         </div>
       </div>

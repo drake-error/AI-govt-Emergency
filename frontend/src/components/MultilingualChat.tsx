@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Send, Bot, User, Globe, AlertOctagon } from 'lucide-react';
 
 interface Message {
@@ -15,6 +15,13 @@ export default function MultilingualChat() {
   const [inputText, setInputText] = useState("");
   const [lang, setLang] = useState("en-IN");
   const [isLoading, setIsLoading] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages]);
 
   const quickPrompts = [
     { text: "Where is my nearest shelter?", label: "Nearest Shelter" },
@@ -108,6 +115,7 @@ export default function MultilingualChat() {
             </div>
           </div>
         )}
+        <div ref={messagesEndRef} />
       </div>
 
       {/* QUICK CHIPS */}

@@ -1,326 +1,334 @@
 "use client";
 
 import dynamic from 'next/dynamic';
-import { useState, useRef } from 'react';
-import { Mic, AlertTriangle, MapPin, Compass, ShieldAlert, Award, ShieldCheck, HelpCircle } from 'lucide-react';
-import AadhaarVerifier from '@/components/AadhaarVerifier';
-import AuthorityFinder from '@/components/AuthorityFinder';
-import MultilingualChat from '@/components/MultilingualChat';
+import { useState, useRef, useEffect } from 'react';
+import jsPDF from 'jspdf';
+import { Mic, AlertTriangle, Compass, Camera, FileDown, ShieldAlert, Landmark, FileText, Search, CloudRain } from 'lucide-react';
 
 const CitizenMap = dynamic(() => import('@/components/CitizenMap'), { ssr: false });
+import MultilingualChat from '@/components/MultilingualChat';
 
-export default function CitizenEmergencyMode() {
+export default function UnifiedGovTechPortal() {
+  // Voice State
   const [isListening, setIsListening] = useState(false);
-  const [selectedLang, setSelectedLang] = useState('en-IN');
-  const [transcript, setTranscript] = useState("Press microphone to activate voice assist");
-  const [sosStatus, setSosStatus] = useState<"IDLE" | "HOLDING" | "SENT">("IDLE");
-  const [compressedPayload, setCompressedPayload] = useState<string | null>(null);
-  const holdTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [selectedLang, setSelectedLang] = useState('hi-IN');
+  const [transcript, setTranscript] = useState("वॉयस कमांड के लिए माइक्रोफोन दबाएं | Press mic for voice command");
+  
+  // Lookup & Weather State
+  const [searchDistrict, setSearchDistrict] = useState("Bengaluru Urban");
+  const [lookupResult, setLookupResult] = useState<any>(null);
+  const [weatherData, setWeatherData] = useState<any>(null);
 
-  const langGreetings: Record<string, string> = {
-    'en-IN': "Welcome to AI Disaster Response Navigator. Speak now.",
-    'hi-IN': "आपदा सहायता प्रणाली में स्वागत है। बोलें।",
-    'ta-IN': "பேரழிவு உதவி அமைப்பிற்கு உங்களை வரவேற்கிறோம். பேசுங்கள்.",
-    'te-IN': "విపత్తు సహాయ కేంద్రానికి స్వాగతం. మాట్లాడండి.",
-    'kn-IN': "ವಿಪತ್ತು ನಿರ್ವಹಣಾ ಸಹಾಯ ಕೇಂದ್ರಕ್ಕೆ ಸ್ವಾಗತ. ಮಾತನಾಡಿ."
-  };
+  // Workforce & Payroll State
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [stream, setStream] = useState<MediaStream | null>(null);
+  const [isCameraActive, setIsCameraActive] = useState(false);
+  const [attendanceLog, setAttendanceLog] = useState<{ id: number, name: string, time: string, dept: string, status: string }[]>([
+    { id: 4021, name: "Commander Rajesh Kumar", time: "18:45:12", dept: "SDRF Battalion 4", status: "COMPLIANT: On Duty" },
+    { id: 3102, name: "Inspector Amit Sharma", time: "18:32:00", dept: "Municipal Debris Unit", status: "COMPLIANT: On Duty" }
+  ]);
+  const [selectedWorkerId, setSelectedWorkerId] = useState<string>("4021");
+  const [payrollResult, setPayrollResult] = useState<any>(null);
+  const [isCalculating, setIsCalculating] = useState(false);
 
   const langResponses: Record<string, string> = {
-    'en-IN': "Distress location logged. Our SDRF response team has been alerted. Look at the GIS Map on the right and proceed to the green Relief Shelter.",
-    'hi-IN': "आपातकालीन स्थिति दर्ज कर ली गई है। हमारी एस.डी.आर.एफ. टीम को अलर्ट कर दिया गया है। शांत रहें, दाहिनी ओर जी.आई.एस. मैप देखें और निकटतम ग्रीन रिलीफ शेल्टर की ओर बढ़ें।",
-    'ta-IN': "உங்கள் அவசரநிலையை நான் குறித்துக் கொண்டேன். எங்களது மீட்புக் குழு எச்சரிக்கப்பட்டுள்ளது. அமைதியாக இருங்கள், வரைபடத்தைப் பார்த்து, அருகிலுள்ள நிவாரண முகாமிற்குச் செல்லுங்கள்.",
-    'te-IN': "నేను మీ అత్యవసర పరిస్థితిని నమోదు చేసాను. మా సహాయక బృందం అప్రమత్తమైంది. కుడివైపు ఉన్న మ్యాప్ చూసి సమీప నివాస శిబిరానికి వెళ్ళండి.",
-    'kn-IN': "ನಿಮ್ಮ ತುರ್ತು ಪರಿಸ್ಥಿತಿಯನ್ನು ನಾನು ದಾಖಲಿಸಿಕೊಂಡಿದ್ದೇನೆ. ನಮ್ಮ ರಕ್ಷಣಾ ತಂಡಕ್ಕೆ ಮಾಹಿತಿ ನೀಡಲಾಗಿದೆ. ಶಾಂತರಾಗಿರಿ, ಬಲಭಾಗದಲ್ಲಿರುವ ನಕ್ಷೆಯನ್ನು ನೋಡಿ ಮತ್ತು ಹತ್ತಿರದ ಪುನರ್ವಸತಿ ಕೇಂದ್ರಕ್ಕೆ ತೆರಳಿ."
+    'hi-IN': "आपातकालीन स्थिति दर्ज। जी.आई.एस. मैप देखें।",
+    'kn-IN': "ತುರ್ತು ಪರಿಸ್ಥಿತಿ ದಾಖಲಾಗಿದೆ. ನಕ್ಷೆ ನೋಡಿ.",
+    'en-IN': "Emergency logged. Check the GIS map."
   };
+
+  const fetchAreaDetails = async () => {
+    try {
+      const res = await fetch(`http://localhost:8000/api/navigator/lookup?district=${searchDistrict}`);
+      const data = await res.json();
+      setLookupResult(data);
+      
+      const apiKey = process.env.NEXT_PUBLIC_OPENWEATHER_KEY;
+      if (apiKey) {
+        const wRes = await fetch(`https://api.openweathermap.org/data/2.5/weather?q=${searchDistrict},IN&appid=${apiKey}&units=metric`);
+        const wData = await wRes.json();
+        setWeatherData(wData);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  useEffect(() => {
+    fetchAreaDetails();
+  }, []);
 
   const startListening = () => {
     const SpeechRecognition = window.SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      setTranscript("Voice recognition not supported. Please use manual features below.");
-      return;
-    }
+    if (!SpeechRecognition) return;
 
     const recognition = new SpeechRecognition();
     recognition.lang = selectedLang;
     recognition.interimResults = false;
-    recognition.maxAlternatives = 1;
-
     recognition.onstart = () => {
       setIsListening(true);
-      setTranscript(langGreetings[selectedLang] || "Listening...");
+      setTranscript("Listening...");
     };
-
     recognition.onresult = (event: any) => {
       const speechResult = event.results[0][0].transcript;
       setTranscript(`You said: "${speechResult}"`);
-      
       setTimeout(() => {
-        const responseText = langResponses[selectedLang] || langResponses['en-IN'];
-        setTranscript(responseText);
-        speakResponse(responseText);
+        setTranscript(langResponses[selectedLang] || langResponses['en-IN']);
       }, 1000);
     };
-
-    recognition.onerror = (event: any) => {
-      setTranscript(`Speech Error: ${event.error}`);
-      setIsListening(false);
-    };
-
-    recognition.onend = () => {
-      setIsListening(false);
-    };
-
+    recognition.onend = () => setIsListening(false);
     recognition.start();
   };
 
-  const speakResponse = (text: string) => {
-    if ('speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = selectedLang;
-      window.speechSynthesis.speak(utterance);
+  const startCamera = async () => {
+    try {
+      const mediaStream = await navigator.mediaDevices.getUserMedia({ video: true });
+      if (videoRef.current) videoRef.current.srcObject = mediaStream;
+      setStream(mediaStream);
+      setIsCameraActive(true);
+    } catch (err) {
+      console.error(err);
     }
   };
 
-  const handleSOSDown = () => {
-    setSosStatus("HOLDING");
-    holdTimeoutRef.current = setTimeout(async () => {
-      setSosStatus("SENT");
-      
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(async (pos) => {
-          const lat = parseFloat(pos.coords.latitude.toFixed(6));
-          const lng = parseFloat(pos.coords.longitude.toFixed(6));
-          
-          const compressed = JSON.stringify({
-            id: `SOS-${Math.floor(100 + Math.random() * 900)}`,
-            loc: [lat, lng],
-            stat: "ACT",
-            time: Math.floor(Date.now() / 1000)
-          });
-          
-          setCompressedPayload(compressed);
+  const stopCamera = () => {
+    if (stream) {
+      stream.getTracks().forEach(track => track.stop());
+      setStream(null);
+      setIsCameraActive(false);
+    }
+  };
 
-          try {
-            await fetch('http://localhost:8000/api/sos/trigger', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                name: "Emergency Citizen",
-                phone: "MHA-Citizen",
-                message: "Rapid SMS Packet Distress SOS Triggered",
-                lat: lat,
-                lng: lng
-              })
-            });
-          } catch(e) {
-            console.warn("Backend offline, dispatch mock complete.");
-          }
-        });
+  const simulateBiometricScan = () => {
+    if (!isCameraActive) return;
+    const newLog = {
+      id: Math.floor(1000 + Math.random() * 9000),
+      name: "Sanjeev Malhotra",
+      time: new Date().toLocaleTimeString(),
+      dept: "Medical Relief Corps",
+      status: "COMPLIANT: On Duty"
+    };
+    setAttendanceLog([newLog, ...attendanceLog]);
+  };
+
+  const calculatePayroll = async (workerId: number) => {
+    setIsCalculating(true);
+    try {
+      const hoursWorked = workerId === 4021 ? 11.5 : 14.5;
+      const res = await fetch(`http://localhost:8000/api/workforce/payroll`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          worker_id: workerId.toString(),
+          hours_worked: hoursWorked,
+          hourly_rate: 500.0,
+          multiplier: 1.5
+        })
+      });
+      if (!res.ok) {
+         setPayrollResult({ total_payable_inr: 0, compliance_status: "ERROR: Server rejected request" });
+      } else {
+         const data = await res.json();
+         setPayrollResult(data);
       }
-    }, 3000);
+    } catch (e) {
+      console.error(e);
+      setPayrollResult({ total_payable_inr: 0, compliance_status: "ERROR: Network failure" });
+    }
+    setIsCalculating(false);
   };
 
-  const handleSOSUp = () => {
-    if (sosStatus === "HOLDING") {
-      clearTimeout(holdTimeoutRef.current!);
-      setSosStatus("IDLE");
-    }
+  const generatePDF = () => {
+    if (!payrollResult) return;
+    const doc = new jsPDF();
+    const targetWorker = attendanceLog.find(w => w.id === parseInt(selectedWorkerId)) || { name: "Assigned Responder", dept: "Emergency Division" };
+
+    doc.setFillColor(248, 250, 252);
+    doc.rect(0, 0, 210, 297, "F");
+    doc.setFillColor(249, 115, 22); doc.rect(0, 0, 210, 4, "F");
+    doc.setFillColor(16, 185, 129); doc.rect(0, 4, 210, 2, "F");
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(15, 23, 42);
+    doc.setFontSize(16);
+    doc.text("GOVERNMENT OF INDIA", 105, 22, { align: "center" });
+    
+    doc.setFontSize(10);
+    doc.text(`Full Name: ${targetWorker.name}`, 15, 56);
+    doc.text(`Registration ID: SDRF-${payrollResult.worker_id}`, 15, 62);
+    doc.text(`Department: ${targetWorker.dept}`, 15, 68);
+    
+    doc.text(`Total Deployment Hours: ${payrollResult.total_hours} Hours`, 15, 98);
+    doc.text(`Base Wage Earnings: INR ${payrollResult.base_earnings}.00`, 15, 104);
+    doc.text(`Hazard Relief Bonus (1.5x): INR ${payrollResult.emergency_bonus}.00`, 15, 110);
+    doc.text(`TOTAL PAYABLE: INR ${payrollResult.total_payable_inr}.00`, 15, 126);
+    
+    doc.text(`REGULATION RESULT: ${payrollResult.compliance_status}`, 15, 163);
+
+    doc.save(`SDRF_EX_GRATIA_LEDGER_${payrollResult.worker_id}.pdf`);
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 p-4 md:p-0">
-      
-      {/* LEFT & CENTER COLUMNS: PORTAL ACCESS AND GRIEVANCE REDRESSAL DIRECTORY */}
-      <div className="lg:col-span-2 space-y-8">
-        
-        {/* BANNER CARD */}
-        <div className="bg-gradient-to-r from-slate-900 to-slate-950 text-white rounded-2xl p-6 border-b-4 border-amber-600 shadow-md relative overflow-hidden">
-          <div className="absolute right-0 top-0 opacity-10 pointer-events-none transform translate-x-4 -translate-y-4">
-             <Award className="w-64 h-64 text-amber-500" />
-          </div>
-          <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center space-y-4 md:space-y-0">
-            <div>
-              <span className="text-[10px] text-amber-400 font-black tracking-widest uppercase bg-amber-500/10 border border-amber-500/30 px-3.5 py-1 rounded-full">
-                NATIONAL DESK ACTIVE
-              </span>
-              <h2 className="text-2xl font-black mt-2.5 text-slate-100">AI Disaster Assistance & Ward Grievances</h2>
-              <p className="text-xs text-slate-400 mt-1 max-w-xl">
-                Secured E-Governance portal with real-time speech analytics, Aadhaar Sandbox authorization, and localized ward directory escalation (Power, Waste, Roads, MLA).
-              </p>
-            </div>
-            
-            <div className="bg-slate-800/80 border border-slate-700 p-2 rounded-xl flex items-center space-x-2 shrink-0">
-              <span className="text-xs text-slate-400 font-medium">Voice Accent:</span>
-              <select 
-                value={selectedLang} 
-                onChange={(e) => setSelectedLang(e.target.value)}
-                className="bg-slate-900 border border-slate-700 text-xs font-bold text-amber-400 rounded p-1.5 focus:ring-1 focus:ring-amber-500"
-              >
-                <option value="en-IN">English (India)</option>
-                <option value="hi-IN">हिंदी (Hindi)</option>
-                <option value="ta-IN">தமிழ் (Tamil)</option>
-                <option value="te-IN">తెలుగు (Telugu)</option>
-                <option value="kn-IN">ಕನ್ನಡ (Kannada)</option>
-              </select>
-            </div>
-          </div>
+    <div className="space-y-6">
+      <div className="bg-gradient-to-r from-slate-900 to-slate-950 text-white rounded-2xl p-6 border-b-4 border-amber-600 shadow-md flex justify-between items-center">
+        <div>
+          <span className="text-[10px] text-amber-400 font-black tracking-widest uppercase bg-amber-500/10 border border-amber-500/30 px-3.5 py-1 rounded-full">
+            UNIFIED NATIONAL DISASTER COMMAND
+          </span>
+          <h2 className="text-2xl font-black mt-2.5 text-slate-100">Civic Care & SDRF Payroll Master</h2>
         </div>
+      </div>
 
-        {/* VOICE INPUT & MANUAL TOUCH BUTTONS */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          
-          {/* VOICE TRANSLATION BOT */}
-          <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex flex-col items-center justify-between text-center min-h-[340px] relative">
-            <div className="absolute top-4 left-4 bg-red-100 text-red-700 text-[10px] font-black uppercase px-2.5 py-1 rounded-full flex items-center">
-              <ShieldAlert className="w-3.5 h-3.5 mr-1" /> VOICE ACTIVE
-            </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* CITIZEN EMERGENCY CORRIDOR */}
+        <div className="space-y-6">
+          <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm relative">
+            <h3 className="font-extrabold text-slate-950 mb-4 flex items-center border-b pb-2"><ShieldAlert className="w-5 h-5 mr-2 text-red-600"/> Citizen Emergency Corridor</h3>
             
-            <div className="my-auto py-6">
-              <button 
-                onClick={startListening}
-                className={`relative w-28 h-28 rounded-full flex items-center justify-center transition-all ${
-                  isListening ? 'bg-red-600 shadow-[0_0_35px_rgba(220,38,38,0.5)]' : 'bg-slate-100 hover:bg-slate-200 border-2 border-slate-300'
-                }`}
-              >
-                {isListening && <div className="absolute inset-0 rounded-full bg-red-500 animate-pulse-ring"></div>}
-                <Mic className={`w-12 h-12 ${isListening ? 'text-white' : 'text-slate-800'}`} />
-              </button>
+            <div className="flex gap-4 mb-4">
+               <input 
+                 value={searchDistrict}
+                 onChange={e => setSearchDistrict(e.target.value)}
+                 className="flex-1 bg-slate-50 border border-slate-300 rounded-xl px-4 py-2 text-sm font-bold"
+                 placeholder="Enter District (e.g. Mysuru)"
+               />
+               <button onClick={fetchAreaDetails} className="bg-amber-600 text-white px-4 py-2 rounded-xl font-bold flex items-center">
+                  <Search className="w-4 h-4 mr-1" /> Lookup
+               </button>
             </div>
-            
-            <div className="w-full bg-slate-950/5 border border-slate-200 p-4 rounded-xl text-xs min-h-[80px] flex items-center justify-center">
-              <p className="text-slate-700 font-bold leading-relaxed">{transcript}</p>
-            </div>
-          </div>
 
-          {/* TOUCH TARGET QUICK ACTIONS */}
-          <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex flex-col justify-between">
-            <div>
-              <h3 className="text-xs font-bold text-slate-800 uppercase tracking-widest mb-1.5">Direct Helpline Targets</h3>
-              <p className="text-[10px] text-slate-500 mb-4">Tactile targets optimized for high accessibility in active emergencies.</p>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4">
-              <a href="tel:1078" className="h-16 bg-red-50 text-red-700 border border-red-200 rounded-xl font-black text-xs flex flex-col justify-center items-center hover:bg-red-100 active:scale-95 transition-all text-center">
-                <AlertTriangle className="w-5 h-5 mb-1 text-red-600" />
-                SDRF DESK: 1078
-              </a>
-              <a href="tel:108" className="h-16 bg-blue-50 text-blue-700 border border-blue-200 rounded-xl font-black text-xs flex flex-col justify-center items-center hover:bg-blue-100 active:scale-95 transition-all text-center">
-                <AlertTriangle className="w-5 h-5 mb-1 text-blue-600" />
-                MEDICAL AID: 108
-              </a>
-              <a href="tel:112" className="h-16 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl font-black text-xs flex flex-col justify-center items-center hover:bg-emerald-100 active:scale-95 transition-all text-center">
-                <MapPin className="w-5 h-5 mb-1 text-emerald-600" />
-                POLICE HELP: 112
-              </a>
-              <a href="tel:1070" className="h-16 bg-amber-50 text-amber-700 border border-amber-200 rounded-xl font-black text-xs flex flex-col justify-center items-center hover:bg-amber-100 active:scale-95 transition-all text-center">
-                <Compass className="w-5 h-5 mb-1 text-amber-600" />
-                STATE DESK: 1070
-              </a>
-            </div>
-            
-            <div className="mt-4 pt-4 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-500 font-medium">
-               <span>Official Sovereign DPI Link</span>
-               <span className="text-slate-800 font-extrabold flex items-center">
-                 <ShieldCheck className="w-4 h-4 mr-1 text-emerald-600" /> SECURE GATEWAY
-               </span>
-            </div>
-          </div>
-
-        </div>
-
-        {/* INTERACTIVE WARD GRIEVANCE OFFICIAL SELECTOR */}
-        <AuthorityFinder />
-
-        {/* SECURE AADHAAR SANDBOX E-KYC FRAME */}
-        <AadhaarVerifier />
-
-        {/* SOS BROADCAST PAYLOAD */}
-        <div className="bg-red-50 rounded-2xl p-6 border-2 border-dashed border-red-300">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center space-y-4 md:space-y-0">
-             <div>
-               <h3 className="font-extrabold text-red-950 text-sm flex items-center">
-                 <span className="w-2.5 h-2.5 bg-red-600 rounded-full inline-block mr-2 animate-ping"></span>
-                 🚨 CRISIS ATTENDANCE COMPLIANCE SOS
-               </h3>
-               <p className="text-xs text-slate-600 mt-1 max-w-lg">
-                 Press and hold for 3 seconds. The backend will parse telemetry coordinates and trigger active SMS verification alerts directly via Twilio to command operators.
-               </p>
-             </div>
-             
-             <button
-               onMouseDown={handleSOSDown}
-               onMouseUp={handleSOSUp}
-               onMouseLeave={handleSOSUp}
-               onTouchStart={handleSOSDown}
-               onTouchEnd={handleSOSUp}
-               className={`w-full md:w-48 py-4 px-6 rounded-xl font-black text-sm tracking-wider uppercase transition-all duration-300 ${
-                 sosStatus === "SENT" ? "bg-green-600 text-white shadow-lg shadow-green-600/30" : 
-                 sosStatus === "HOLDING" ? "bg-red-700 text-white scale-95 shadow-[inset_0_0_15px_rgba(0,0,0,0.4)]" : 
-                 "bg-red-600 hover:bg-red-700 text-white shadow-[0_5px_0_#991b1b]"
-               }`}
-             >
-               {sosStatus === "SENT" ? "✓ BROADCASTED!" : "HOLD SOS (3 SEC)"}
-             </button>
-          </div>
-
-          {compressedPayload && (
-            <div className="mt-4 bg-slate-900 border border-slate-800 rounded-xl p-4 font-mono text-xs text-emerald-400">
-               <div className="flex justify-between items-center mb-2 text-[10px] text-slate-500 font-bold tracking-wider">
-                 <span>COMPRESSED SINGLE-PACKET (SMS PAYLOAD):</span>
-                 <span className="text-emerald-500">24 BYTES</span>
+            <div className="flex gap-4 items-center justify-between bg-slate-50 rounded-xl p-4 border border-slate-200 mb-6">
+               <div className="flex-1">
+                  <p className="text-[10px] font-black text-slate-500 uppercase">Emergency Mic</p>
+                  <select value={selectedLang} onChange={e => setSelectedLang(e.target.value)} className="bg-white border border-slate-200 text-xs font-bold rounded p-1 mt-1">
+                     <option value="hi-IN">हिंदी (hi-IN)</option>
+                     <option value="kn-IN">ಕನ್ನಡ (kn-IN)</option>
+                     <option value="en-IN">English (en-IN)</option>
+                  </select>
                </div>
-               <p className="break-all">{compressedPayload}</p>
+               <button 
+                onClick={startListening}
+                className={`relative w-16 h-16 rounded-full flex items-center justify-center transition-all ${isListening ? 'bg-red-600 shadow-[0_0_20px_rgba(220,38,38,0.5)]' : 'bg-slate-200 border border-slate-300'}`}
+               >
+                 <Mic className={`w-8 h-8 ${isListening ? 'text-white' : 'text-slate-700'}`} />
+               </button>
+               <div className="flex-1 text-right text-xs font-bold text-slate-700">
+                  {transcript}
+               </div>
             </div>
-          )}
+
+            {weatherData && weatherData.weather && weatherData.main && (
+              <div className="bg-blue-50 border border-blue-200 p-3 rounded-xl flex items-center text-blue-800 text-sm font-bold mb-4">
+                <CloudRain className="w-5 h-5 mr-2" />
+                Live Weather: {weatherData.weather[0].description}, Temp: {weatherData.main.temp}°C
+              </div>
+            )}
+
+            <div className="rounded-xl overflow-hidden h-[300px] border border-slate-200">
+              <CitizenMap />
+            </div>
+            
+            {lookupResult && lookupResult.records && (
+               <div className="mt-4 p-4 bg-emerald-50 border border-emerald-200 rounded-xl">
+                  <p className="text-xs text-emerald-800 font-bold uppercase mb-2">Live Escaltion Details ({lookupResult.source})</p>
+                  <p className="text-sm font-black text-slate-900">{lookupResult.records[0].mla_name || "Official"}</p>
+                  <p className="text-xs text-slate-700">Contact: {lookupResult.records[0].mla_contact || "N/A"}</p>
+                  <p className="text-xs text-slate-700">SDRF Dispatch: {lookupResult.records[0].sdrf_dispatch || "N/A"}</p>
+               </div>
+            )}
+            
+            <div className="mt-6">
+              <MultilingualChat />
+            </div>
+          </div>
+        </div>
+
+        {/* COMPLIANCE & PAYROLL GRID */}
+        <div className="space-y-6">
+          <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm relative h-full">
+            <h3 className="font-extrabold text-slate-950 mb-4 flex items-center border-b pb-2"><Landmark className="w-5 h-5 mr-2 text-emerald-600"/> Compliance & SDRF Payroll Grid</h3>
+            
+            <div className="bg-slate-950 rounded-xl overflow-hidden h-[180px] relative flex items-center justify-center border-4 border-slate-900 shadow-inner mb-4">
+              {isCameraActive ? (
+                <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover opacity-80" />
+              ) : (
+                <div className="text-slate-600 flex flex-col items-center">
+                  <Camera className="w-8 h-8 mb-2 opacity-50" />
+                  <p className="text-[10px] uppercase font-extrabold tracking-widest">Kiosk Offline</p>
+                </div>
+              )}
+            </div>
+            
+            <div className="flex gap-2 mb-4">
+               {!isCameraActive ? (
+                 <button onClick={startCamera} className="flex-1 bg-slate-900 text-white py-2 rounded-lg text-xs font-bold uppercase">Start Camera</button>
+               ) : (
+                 <>
+                   <button onClick={simulateBiometricScan} className="flex-1 bg-emerald-600 text-white py-2 rounded-lg text-xs font-bold uppercase">Scan Fingerprint</button>
+                   <button onClick={stopCamera} className="bg-red-600 text-white px-4 py-2 rounded-lg text-xs font-bold uppercase">Stop</button>
+                 </>
+               )}
+            </div>
+
+            <div className="overflow-x-auto mb-6">
+              <table className="w-full text-left text-[10px] text-slate-600">
+                <thead className="bg-slate-50 uppercase border-b border-slate-200">
+                  <tr>
+                    <th className="py-2 px-2">Responder</th>
+                    <th className="py-2 px-2">ID</th>
+                    <th className="py-2 px-2">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {attendanceLog.slice(0,3).map((log, i) => (
+                    <tr key={i} className="font-bold">
+                      <td className="py-2 px-2 text-slate-800">{log.name}</td>
+                      <td className="py-2 px-2">SDRF-{log.id}</td>
+                      <td className="py-2 px-2 text-emerald-600">{log.status}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
+               <div className="flex gap-2 mb-4">
+                  <select 
+                    value={selectedWorkerId}
+                    onChange={(e) => setSelectedWorkerId(e.target.value)}
+                    className="flex-1 bg-white border border-slate-300 text-xs rounded-lg p-2 font-bold"
+                  >
+                    {attendanceLog.map(l => (
+                      <option key={l.id} value={l.id.toString()}>{l.name}</option>
+                    ))}
+                  </select>
+                  <button onClick={() => calculatePayroll(parseInt(selectedWorkerId))} className="bg-slate-900 text-white px-4 py-2 rounded-lg text-xs font-bold uppercase">
+                     Process
+                  </button>
+               </div>
+
+               {payrollResult && (
+                 <div className="space-y-3 bg-white p-4 border border-slate-200 rounded-lg">
+                    <div className="flex justify-between border-b pb-1">
+                      <span className="text-xs text-slate-500">Total Payable:</span>
+                      <span className="text-sm font-black">INR {payrollResult.total_payable_inr}.00</span>
+                    </div>
+                    <div className="flex justify-between border-b pb-1">
+                      <span className="text-xs text-slate-500">Compliance:</span>
+                      <span className={`text-[10px] font-extrabold ${payrollResult?.compliance_status?.includes('VIOLATION') ? 'text-red-600' : 'text-emerald-600'}`}>
+                        {payrollResult?.compliance_status || "N/A"}
+                      </span>
+                    </div>
+                    <button onClick={generatePDF} className="w-full bg-emerald-600 text-white py-2 rounded-lg font-bold text-xs flex items-center justify-center uppercase">
+                      <FileDown className="w-4 h-4 mr-1" /> Export PDF Ledger
+                    </button>
+                 </div>
+               )}
+            </div>
+
+          </div>
         </div>
 
       </div>
-
-      {/* RIGHT COLUMN: HIGH-DENSITY GIS MAP & MULTILINGUAL CHAT */}
-      <div className="lg:col-span-1 space-y-8 flex flex-col">
-        
-        {/* INTERACTIVE GIS CRISIS NETWORK */}
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 flex flex-col h-[480px] relative shrink-0">
-          <div className="mb-4">
-            <h3 className="font-extrabold text-slate-950 text-sm flex items-center">
-              <Compass className="w-4.5 h-4.5 mr-1.5 text-amber-600" />
-              CIVIC INTEGRATED GIS MAP
-            </h3>
-            <p className="text-[10px] text-slate-500">Real-time dynamic safe coordinates & flood-zones</p>
-          </div>
-          
-          <div className="flex-1 rounded-xl overflow-hidden border border-slate-100 relative z-0">
-             <CitizenMap />
-          </div>
-        </div>
-
-        {/* MULTILINGUAL GPT-4O CITIZEN AI CHATBOT */}
-        <MultilingualChat />
-
-        {/* OFFICIAL STATE STAMP STATS */}
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4">
-           <h3 className="font-extrabold text-slate-900 text-xs uppercase tracking-widest border-b border-slate-100 pb-2 flex items-center">
-             <HelpCircle className="w-4 h-4 mr-1 text-slate-400" /> E-Governance Scheme Links
-           </h3>
-           <ul className="space-y-3.5 text-xs text-slate-600">
-              <li className="flex items-start space-x-2">
-                <span className="inline-block w-1.5 h-1.5 bg-emerald-500 rounded-full mt-1.5 shrink-0"></span>
-                <span>Active ex-gratia compensation claims verified instantly via Aadhaar Sandbox credential checks.</span>
-              </li>
-              <li className="flex items-start space-x-2">
-                <span className="inline-block w-1.5 h-1.5 bg-amber-500 rounded-full mt-1.5 shrink-0"></span>
-                <span>Ward directories map automatic Escalation Protocols directly to the Legislative Desk.</span>
-              </li>
-              <li className="flex items-start space-x-2">
-                <span className="inline-block w-1.5 h-1.5 bg-slate-400 rounded-full mt-1.5 shrink-0"></span>
-                <span>High accessibility touch triggers comply with international Web Content Accessibility Guidelines (WCAG).</span>
-              </li>
-           </ul>
-        </div>
-
-      </div>
-
     </div>
   );
 }

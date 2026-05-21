@@ -68,7 +68,17 @@ export default function WorkforcePayroll() {
       const hourlyRate = 500;
       const multiplier = 1.5; // Hazard bonus
       
-      const res = await fetch(`http://localhost:8000/api/workforce/payroll/${workerId}?hours_worked=${hoursWorked}&hourly_rate=${hourlyRate}&multiplier=${multiplier}`);
+      const res = await fetch(`http://localhost:8000/api/workforce/payroll`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          worker_id: workerId.toString(),
+          hours_worked: hoursWorked,
+          hourly_rate: 500.0,
+          multiplier: 1.5
+        })
+      });
+      if (!res.ok) throw new Error("Server rejected request");
       const data = await res.json();
       setPayrollResult(data);
     } catch (e) {
@@ -158,13 +168,13 @@ export default function WorkforcePayroll() {
     doc.text("3. WORKFORCE REGULATORY COMPLIANCE STAMP", 15, 148);
     doc.setFont("helvetica", "normal");
     
-    const isCompliant = !payrollResult.compliance_status.includes("VIOLATION");
+    const isCompliant = payrollResult?.compliance_status?.includes("VIOLATION") === false;
     doc.setFillColor(isCompliant ? 240 : 254, isCompliant ? 253 : 242, isCompliant ? 250 : 242);
     doc.rect(15, 154, 180, 14, "F");
     
     doc.setFont("helvetica", "bold");
     doc.setTextColor(isCompliant ? 5 : 220, isCompliant ? 150 : 38, isCompliant ? 105 : 38);
-    doc.text(`REGULATION RESULT: ${payrollResult.compliance_status}`, 20, 163);
+    doc.text(`REGULATION RESULT: ${payrollResult?.compliance_status || "N/A"}`, 20, 163);
 
     // Digital Signatures
     doc.setTextColor(15, 23, 42);
@@ -339,8 +349,8 @@ export default function WorkforcePayroll() {
                     </div>
                     <div className="flex justify-between pb-2">
                       <span className="text-slate-500">Force Regulatory Result</span>
-                      <span className={`font-extrabold ${payrollResult.compliance_status.includes('VIOLATION') ? 'text-red-600' : 'text-emerald-600'}`}>
-                        {payrollResult.compliance_status}
+                      <span className={`font-extrabold ${payrollResult?.compliance_status?.includes('VIOLATION') ? 'text-red-600' : 'text-emerald-600'}`}>
+                        {payrollResult?.compliance_status || "N/A"}
                       </span>
                     </div>
                  </div>
