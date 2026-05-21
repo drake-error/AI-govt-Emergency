@@ -1,0 +1,23 @@
+@import 'tailwindcss';
+@import 'leaflet/dist/leaflet.css';
+
+@theme {
+  --color-emergency-red: #ef4444;
+  --color-warning-amber: #f59e0b;
+  --color-resource-blue: #3b82f6;
+  --color-safe-green: #10b981;
+}
+
+body {
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Animations */
+@keyframes pulse-ring {
+  0% { transform: scale(0.8); opacity: 0.5; }
+  100% { transform: scale(1.5); opacity: 0; }
+}
+
+.animate-pulse-ring {
+  animation: pulse-ring 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+}
