@@ -31,7 +31,7 @@ export default function AdminDashboard() {
             <Briefcase className="w-4 h-4 mr-2" /> Payroll
           </Link>
           <Link 
-            href="/admin/schemes" 
+            href="/schemes" 
             className="flex-1 text-center bg-emerald-500 hover:bg-emerald-600 text-slate-950 px-5 py-3 rounded-xl font-extrabold text-xs tracking-wider uppercase flex items-center justify-center transition-all shadow-md shadow-emerald-500/10"
           >
             <Landmark className="w-4 h-4 mr-2" /> Relief Schemes
