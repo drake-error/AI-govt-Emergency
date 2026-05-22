@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
 import "./globals.css";
 import Link from "next/link";
 import { Search } from "lucide-react";
@@ -8,7 +7,6 @@ import SOSFloatingButton from "@/components/SOSFloatingButton";
 import NavBar from "@/components/NavBar";
 import ThemeToggle from "@/components/ThemeToggle";
 
-const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "National Disaster Management & Civic Care Portal | NDMA India",
@@ -23,6 +21,10 @@ export default function RootLayout({
   return (
     <html lang="en" className="scroll-smooth" suppressHydrationWarning>
       <head>
+        {/* Google Fonts - Inter */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet" />
         <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
         <script dangerouslySetInnerHTML={{
           __html: `
@@ -35,7 +37,7 @@ export default function RootLayout({
           `
         }} />
       </head>
-      <body className={`${inter.className} bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 min-h-screen flex flex-col transition-colors duration-300`}>
+      <body className={`bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 min-h-screen flex flex-col transition-colors duration-300`}>
 
         {/* 1. TRICOLOR TOP STRIP & ACCESSIBILITY BAR */}
         <AccessibilityBar />

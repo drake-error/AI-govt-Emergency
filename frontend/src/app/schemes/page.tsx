@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Search, Filter, ExternalLink, CheckCircle, Star, ChevronDown, ChevronUp, Sparkles } from 'lucide-react';
 
 interface Scheme {
@@ -96,8 +96,8 @@ export default function SchemesPage() {
     setHasSearched(true);
   };
 
-  // Auto-load on first render
-  useState(() => { initialLoad(); });
+  // Auto-load on first render (useEffect ensures this only runs client-side, never during SSG)
+  useEffect(() => { initialLoad(); }, []);
 
   return (
     <div className="space-y-6">
