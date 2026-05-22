@@ -1,6 +1,13 @@
 @import 'tailwindcss';
 @import 'leaflet/dist/leaflet.css';
 
+/*
+ * TAILWIND v4 CLASS-BASED DARK MODE
+ * This @custom-variant is REQUIRED in Tailwind v4 for all dark:* classes to work.
+ * It tells Tailwind: "apply dark: variants when the html element has class 'dark'"
+ */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --color-emergency-red: #ef4444;
   --color-warning-amber: #f59e0b;
