@@ -1,278 +1,97 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
-// Real Indian Government Relief & Welfare Schemes (comprehensive database)
-const SCHEMES = [
-  // ─── DISASTER RELIEF ────────────────────────────────────────────
-  {
-    id: 'sdrf-2024',
-    title: 'State Disaster Relief Fund (SDRF)',
-    category: 'Disaster Relief',
-    ministry: 'Ministry of Home Affairs',
-    description:
-      'Immediate financial assistance to families affected by declared natural disasters including cyclones, floods, earthquakes, and landslides. Covers temporary shelter, food, and rehabilitation costs.',
-    eligibility: 'Citizens in disaster-declared districts. BPL and AAY ration card holders get priority.',
-    amount: '₹3,500 per family (immediate); ₹95,100 for house damage',
-    link: 'https://ndma.gov.in/Disaster-Risk-Governance/DM-Plans/SDRF',
-    link_text: 'Apply via NDMA',
-  },
-  {
-    id: 'ndrf-relief',
-    title: 'National Disaster Response Fund (NDRF)',
-    category: 'Disaster Relief',
-    ministry: 'Ministry of Home Affairs',
-    description:
-      'Central supplementary assistance provided to state governments when the disaster is of severe nature and SDRF funds are insufficient. Covers search & rescue, gratuitous relief, and restoration.',
-    eligibility: 'State government applies on behalf of affected citizens. No individual application needed.',
-    amount: 'Variable based on disaster severity and central assessment',
-    link: 'https://ndma.gov.in',
-    link_text: 'NDMA Official Portal',
-  },
-  {
-    id: 'cyclone-exgratia',
-    title: 'Cyclone & Flood Ex-Gratia Compensation',
-    category: 'Disaster Relief',
-    ministry: 'State Revenue Department',
-    description:
-      'Ex-gratia payment to next of kin of deceased and for grievous injuries sustained during cyclone or flood disasters. Separate compensation for loss of cattle, agricultural land, and fishing boats.',
-    eligibility: 'Families of disaster victims; Injured persons with medical certification from government hospital.',
-    amount: '₹4 lakh per death | ₹2.12 lakh grievous injury | ₹68,900 minor injury',
-    link: 'https://ndma.gov.in/Disaster-Risk-Governance/DM-Plans/NDRF-Norms',
-    link_text: 'Check NDRF Norms',
-  },
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
-  // ─── HEALTH ─────────────────────────────────────────────────────
-  {
-    id: 'pmjay-2024',
-    title: 'Ayushman Bharat PM-JAY',
-    category: 'Health',
-    ministry: 'Ministry of Health & Family Welfare',
-    description:
-      "World's largest government-funded health assurance scheme. Provides cashless and paperless access to healthcare services for secondary and tertiary hospitalization at empanelled hospitals across India.",
-    eligibility: 'Bottom 40% of population as per SECC-2011. BPL families. Automatically enrolled — no registration needed.',
-    amount: '₹5 lakh per family per year (health cover)',
-    link: 'https://pmjay.gov.in',
-    link_text: 'Check Eligibility on PM-JAY',
-  },
-  {
-    id: 'cghs-2024',
-    title: 'Central Government Health Scheme (CGHS)',
-    category: 'Health',
-    ministry: 'Ministry of Health & Family Welfare',
-    description:
-      'Comprehensive healthcare for central government employees, pensioners, and their dependents. Covers OPD, indoor treatment, specialist consultations, and medicines from CGHS dispensaries.',
-    eligibility: 'Central government employees (serving & retired), freedom fighters, journalists accredited to PIB.',
-    amount: 'Cashless treatment; subscription ₹250–₹1000/month based on pay grade',
-    link: 'https://cghs.gov.in',
-    link_text: 'Apply on CGHS Portal',
-  },
-
-  // ─── AGRICULTURE ─────────────────────────────────────────────────
-  {
-    id: 'pm-kisan',
-    title: 'PM-KISAN Samman Nidhi',
-    category: 'Agriculture',
-    ministry: 'Ministry of Agriculture & Farmers Welfare',
-    description:
-      'Direct income support to all landholding farmer families to supplement their financial needs for procuring various inputs for crop cultivation. Amount transferred directly to bank accounts.',
-    eligibility: 'All land-holding farmer families with cultivable land. Excludes government employees, taxpayers, and professionals.',
-    amount: '₹6,000 per year in 3 equal installments of ₹2,000',
-    link: 'https://pmkisan.gov.in',
-    link_text: 'Register on PM-KISAN Portal',
-  },
-  {
-    id: 'pmfby',
-    title: 'PM Fasal Bima Yojana (PMFBY)',
-    category: 'Agriculture',
-    ministry: 'Ministry of Agriculture & Farmers Welfare',
-    description:
-      'Comprehensive crop insurance to provide financial support to farmers suffering crop loss due to unforeseen calamities like drought, flood, pest attacks, hailstorm, and natural fires.',
-    eligibility: 'All farmers including sharecroppers and tenant farmers growing notified crops in notified areas.',
-    amount: 'Premium: 2% for Kharif, 1.5% for Rabi, 5% for commercial crops. Claim based on actual loss.',
-    link: 'https://pmfby.gov.in',
-    link_text: 'Apply on PMFBY Portal',
-  },
-  {
-    id: 'kcc-2024',
-    title: 'Kisan Credit Card (KCC) Scheme',
-    category: 'Agriculture',
-    ministry: 'Ministry of Agriculture & Farmers Welfare',
-    description:
-      'Provides farmers with short-term credit for cultivation, post-harvest expenses, produce marketing, and allied activities at subsidised interest rates. Also covers disaster-affected farmers.',
-    eligibility: 'All farmers — individual or joint borrowers, tenant farmers, oral lessees, and SHGs.',
-    amount: 'Credit up to ₹3 lakh at 4% interest rate (with interest subvention)',
-    link: 'https://www.nabard.org/content.aspx?id=572',
-    link_text: 'Apply via nearest Bank/NABARD',
-  },
-
-  // ─── HOUSING ─────────────────────────────────────────────────────
-  {
-    id: 'pmay-gramin',
-    title: 'PMAY Gramin (Rural Housing)',
-    category: 'Housing',
-    ministry: 'Ministry of Rural Development',
-    description:
-      'Financial assistance to rural BPL households for construction of pucca houses with basic amenities. Includes MGNREGS labour wages for house construction and sanitation facilities.',
-    eligibility: 'Houseless families and those with kutcha/dilapidated houses as per SECC-2011 database.',
-    amount: '₹1.2 lakh (plain areas) | ₹1.3 lakh (hilly/NE/IAP districts)',
-    link: 'https://pmayg.nic.in',
-    link_text: 'Apply on PMAY-G Portal',
-  },
-  {
-    id: 'pmay-urban',
-    title: 'PMAY Urban (Credit Linked Subsidy)',
-    category: 'Housing',
-    ministry: 'Ministry of Housing & Urban Affairs',
-    description:
-      'Credit Linked Subsidy Scheme for home loans to EWS, LIG, and MIG categories. Provides interest subsidy on housing loans to help urban poor own a house.',
-    eligibility: 'EWS (income ≤3 lakh), LIG (3–6 lakh), MIG-I (6–12 lakh), MIG-II (12–18 lakh) families without pucca house.',
-    amount: 'Interest subsidy: 6.5% (EWS/LIG) | 4% (MIG-I) | 3% (MIG-II) on home loans',
-    link: 'https://pmaymis.gov.in',
-    link_text: 'Check Eligibility on PMAY-Urban',
-  },
-
-  // ─── EMPLOYMENT & LIVELIHOOD ─────────────────────────────────────
-  {
-    id: 'mgnregs',
-    title: 'MGNREGS (100 Days Employment Guarantee)',
-    category: 'Employment',
-    ministry: 'Ministry of Rural Development',
-    description:
-      'Guarantees 100 days of wage employment per year to adult members of rural households willing to do unskilled manual work. Provides livelihood security, especially post-disaster.',
-    eligibility: 'Adult member (18+) of any rural household. No income criteria. Works within 5 km radius.',
-    amount: '₹220–₹357/day (state-wise rates). Payment within 15 days of work.',
-    link: 'https://nrega.nic.in',
-    link_text: 'Apply via Gram Panchayat',
-  },
-  {
-    id: 'pmegp',
-    title: 'PM Employment Generation Programme (PMEGP)',
-    category: 'Employment',
-    ministry: 'Ministry of MSME',
-    description:
-      'Credit-linked subsidy scheme to generate employment opportunities in rural and urban areas by helping individuals set up micro enterprises in non-farm sector.',
-    eligibility: 'Any individual above 18 years. For projects above ₹10 lakh — 8th standard pass. No income ceiling.',
-    amount: 'Subsidy: 15–35% of project cost (up to ₹25 lakh manufacturing, ₹10 lakh service)',
-    link: 'https://www.kviconline.gov.in/pmegpeportal/pmegphome/index.jsp',
-    link_text: 'Apply on PMEGP Portal',
-  },
-  {
-    id: 'pm-svanidhi',
-    title: 'PM SVANidhi (Street Vendor Scheme)',
-    category: 'Employment',
-    ministry: 'Ministry of Housing & Urban Affairs',
-    description:
-      'Provides affordable working capital loans to street vendors who lost their livelihoods due to COVID-19 or natural disasters. Includes digital transaction rewards and social security benefits.',
-    eligibility: 'Street vendors with Certificate of Vending or Letter of Recommendation from ULB.',
-    amount: '₹10,000 (1st loan) → ₹20,000 → ₹50,000 (on timely repayment)',
-    link: 'https://pmsvanidhi.mohua.gov.in',
-    link_text: 'Apply on SVANidhi Portal',
-  },
-
-  // ─── SOCIAL SECURITY ─────────────────────────────────────────────
-  {
-    id: 'nsap-pension',
-    title: 'National Social Assistance Programme (NSAP)',
-    category: 'Social Security',
-    ministry: 'Ministry of Rural Development',
-    description:
-      'Social protection to elderly, widows, and disabled persons Below Poverty Line. Covers Indira Gandhi National Old Age, Widow, and Disability Pension Schemes.',
-    eligibility: 'BPL elderly (60+), widows (40+), severely disabled persons (80%+ disability). Aadhaar linked bank account required.',
-    amount: '₹200–₹500/month (centre) + state top-up (total varies ₹500–₹1,500/month)',
-    link: 'https://nsap.nic.in',
-    link_text: 'Apply via Gram Panchayat / ULB',
-  },
-  {
-    id: 'pm-jjby',
-    title: 'PM Jeevan Jyoti Bima Yojana (PMJJBY)',
-    category: 'Social Security',
-    ministry: 'Ministry of Finance',
-    description:
-      'Life insurance scheme offering renewable one-year term life cover. Simple enrollment through bank accounts. Covers death due to any reason including natural disasters.',
-    eligibility: 'Bank account holders aged 18–50 years. Auto-debit from savings bank account.',
-    amount: '₹436/year premium | ₹2 lakh life cover on death',
-    link: 'https://financialservices.gov.in/insurance-divisions/Government-Sponsored-Socially-Oriented-Insurance-Schemes/Pradhan-Mantri-Jeevan-Jyoti-Bima-Yojana(PMJJBY)',
-    link_text: 'Enroll via Bank Branch',
-  },
-  {
-    id: 'pm-suby',
-    title: 'PM Suraksha Bima Yojana (PMSBY)',
-    category: 'Social Security',
-    ministry: 'Ministry of Finance',
-    description:
-      'Accidental death and disability insurance scheme. Extremely low premium making it accessible to weaker sections. Covers accidental deaths including during natural disasters.',
-    eligibility: 'Savings bank account holders aged 18–70 years with Aadhaar-linked account.',
-    amount: '₹20/year premium | ₹2 lakh (accidental death) | ₹1 lakh (partial disability)',
-    link: 'https://jansuraksha.gov.in',
-    link_text: 'Enroll via Jan Suraksha Portal',
-  },
-
-  // ─── WOMEN & CHILDREN ────────────────────────────────────────────
-  {
-    id: 'sukanya-samriddhi',
-    title: 'Sukanya Samriddhi Yojana (SSY)',
-    category: 'Women & Children',
-    ministry: 'Ministry of Finance',
-    description:
-      "Small savings scheme for the girl child to meet education and marriage expenses. One of India's highest interest rate small savings schemes with tax benefits under Section 80C.",
-    eligibility: 'Girl child below 10 years. Maximum 2 girls per family (3 in case of twins/triplets).',
-    amount: 'Min ₹250/year; Max ₹1.5 lakh/year. Current interest rate: 8.2% (Q1 2024)',
-    link: 'https://www.nsiindia.gov.in/InternalPage.aspx?Id_Pk=89',
-    link_text: 'Open at Post Office / Bank',
-  },
-  {
-    id: 'pm-matru-vandana',
-    title: 'PM Matru Vandana Yojana (PMMVY)',
-    category: 'Women & Children',
-    ministry: 'Ministry of Women & Child Development',
-    description:
-      'Maternity benefit scheme providing cash incentive for pregnant and lactating mothers to partly compensate for wage loss and improve health & nutrition practices.',
-    eligibility: 'Pregnant women aged 19+ years for first live birth. Not applicable to central/state government employees.',
-    amount: '₹5,000 in 3 installments (₹1000 + ₹2000 + ₹2000)',
-    link: 'https://wcd.nic.in/schemes/pradhan-mantri-matru-vandana-yojana',
-    link_text: 'Apply at Anganwadi Centre',
-  },
-
-  // ─── EDUCATION ──────────────────────────────────────────────────
-  {
-    id: 'pm-scholarship',
-    title: 'PM Scholarship Scheme (PMSS)',
-    category: 'Education',
-    ministry: 'Ministry of Home Affairs / Ex-Servicemen Welfare',
-    description:
-      'Scholarship for children of ex-servicemen, ex-coastguard personnel and their widows for professional degree courses. Priority to wards of personnel killed/disabled in action.',
-    eligibility: 'Children/widows of Ex-Servicemen & Ex-Coastguard. Minimum 60% marks in last qualifying exam.',
-    amount: '₹3,000/month (girls) | ₹2,500/month (boys) for up to 5 years',
-    link: 'https://ksb.gov.in/pmss.htm',
-    link_text: 'Apply on KSB Portal',
-  },
-
-  // ─── ENERGY & UTILITIES ──────────────────────────────────────────
-  {
-    id: 'pm-ujjwala',
-    title: 'PM Ujjwala Yojana 2.0',
-    category: 'Energy',
-    ministry: 'Ministry of Petroleum & Natural Gas',
-    description:
-      'Free LPG connections to women from BPL households to protect their health and shift from polluting cooking fuels. Includes first refill and stove at no cost to beneficiaries.',
-    eligibility: 'Women aged 18+ from BPL households. SECC, SC/ST, PM-AWAS, AAY, MGNREGS or Forest Dwellers list.',
-    amount: 'Free LPG connection + first cylinder refill + EMI-free hotplate',
-    link: 'https://pmuy.gov.in',
-    link_text: 'Apply on PMUY Portal',
-  },
-  {
-    id: 'saubhagya',
-    title: 'Saubhagya – Rural Electrification',
-    category: 'Energy',
-    ministry: 'Ministry of Power',
-    description:
-      'Free electricity connections to all unelectrified BPL households in rural areas and all unelectrified households in urban areas. Includes wiring, meter, LED bulbs, and switch.',
-    eligibility: 'Households identified in SECC 2011 data without electricity connections.',
-    amount: 'Free connection for BPL | ₹500 deposit (10 installments) for APL rural families',
-    link: 'https://saubhagya.gov.in',
-    link_text: 'Check Status on Saubhagya',
-  },
+// 25+ real Indian government schemes database
+const SCHEMES_DB = [
+  { id: 1, name: "PM Fasal Bima Yojana (PMFBY)", category: "Agriculture", benefit: "Crop insurance up to ₹2 lakh", eligibility: "Farmers with land ownership or tenancy", link: "https://pmfby.gov.in", state: "All India", minIncome: 0, maxIncome: 999999 },
+  { id: 2, name: "PM Awas Yojana - Gramin (PMAY-G)", category: "Housing", benefit: "₹1.2 lakh for plain areas, ₹1.3 lakh for hilly areas for house construction", eligibility: "BPL families without pucca house", link: "https://pmayg.nic.in", state: "All India", minIncome: 0, maxIncome: 100000 },
+  { id: 3, name: "MGNREGA - Employment Guarantee", category: "Employment", benefit: "100 days guaranteed employment per year per household", eligibility: "Adult members of rural households", link: "https://nrega.nic.in", state: "All India", minIncome: 0, maxIncome: 200000 },
+  { id: 4, name: "PM Kisan Samman Nidhi (PM-KISAN)", category: "Agriculture", benefit: "₹6,000 per year (₹2,000 per quarter)", eligibility: "Small and marginal farmers with less than 2 hectares land", link: "https://pmkisan.gov.in", state: "All India", minIncome: 0, maxIncome: 300000 },
+  { id: 5, name: "Ayushman Bharat PM-JAY", category: "Health", benefit: "Health cover up to ₹5 lakh per family per year", eligibility: "BPL families (based on SECC data)", link: "https://pmjay.gov.in", state: "All India", minIncome: 0, maxIncome: 150000 },
+  { id: 6, name: "National Disaster Relief Fund (NDRF)", category: "Disaster Relief", benefit: "Ex-gratia ₹4 lakh for death, ₹1.2 lakh for severe injury", eligibility: "Disaster victims and their families", link: "https://ndma.gov.in", state: "All India", minIncome: 0, maxIncome: 999999 },
+  { id: 7, name: "Cyclone Relief Compensation Scheme", category: "Disaster Relief", benefit: "₹10,000 immediate relief + house repair up to ₹95,100", eligibility: "Households in cyclone-affected districts", link: "https://ndma.gov.in/relief", state: "Coastal States", minIncome: 0, maxIncome: 500000 },
+  { id: 8, name: "Flood Relief Assistance Scheme", category: "Disaster Relief", benefit: "₹3,800 per month for 30 days + free food kits", eligibility: "Flood-affected families in notified districts", link: "https://ndma.gov.in/floods", state: "All India", minIncome: 0, maxIncome: 999999 },
+  { id: 9, name: "PM Jeevan Jyoti Bima Yojana", category: "Insurance", benefit: "₹2 lakh life insurance cover at ₹330/year premium", eligibility: "Bank account holders aged 18-50", link: "https://jansuraksha.gov.in", state: "All India", minIncome: 0, maxIncome: 999999 },
+  { id: 10, name: "PM Suraksha Bima Yojana", category: "Insurance", benefit: "₹2 lakh accident insurance at ₹12/year premium", eligibility: "Bank account holders aged 18-70", link: "https://jansuraksha.gov.in", state: "All India", minIncome: 0, maxIncome: 999999 },
+  { id: 11, name: "National Family Benefit Scheme", category: "Social Security", benefit: "₹20,000 lump sum on death of breadwinner", eligibility: "BPL families (18-60 years breadwinner death)", link: "https://nsap.nic.in", state: "All India", minIncome: 0, maxIncome: 100000 },
+  { id: 12, name: "Indira Gandhi National Old Age Pension", category: "Social Security", benefit: "₹200-500/month pension for elderly poor", eligibility: "BPL citizens aged 60+ years", link: "https://nsap.nic.in", state: "All India", minIncome: 0, maxIncome: 50000 },
+  { id: 13, name: "PM Kaushal Vikas Yojana (PMKVY)", category: "Skill Development", benefit: "Free skill training + ₹8,000 reward on certification", eligibility: "Youth aged 15-45 years seeking employment", link: "https://pmkvyofficial.org", state: "All India", minIncome: 0, maxIncome: 500000 },
+  { id: 14, name: "Pradhan Mantri Ujjwala Yojana", category: "Energy", benefit: "Free LPG connection for BPL families", eligibility: "BPL women without LPG connection", link: "https://pmuy.gov.in", state: "All India", minIncome: 0, maxIncome: 100000 },
+  { id: 15, name: "PM Jan Dhan Yojana", category: "Financial Inclusion", benefit: "Zero-balance savings account + ₹1 lakh accident insurance", eligibility: "All Indian citizens without bank account", link: "https://pmjdy.gov.in", state: "All India", minIncome: 0, maxIncome: 999999 },
+  { id: 16, name: "Earthquake Affected Family Relief", category: "Disaster Relief", benefit: "₹95,100 for house repair, ₹4 lakh for death of family member", eligibility: "Earthquake-affected families in notified areas", link: "https://ndma.gov.in/earthquake", state: "All India", minIncome: 0, maxIncome: 999999 },
+  { id: 17, name: "Drought Affected Farmer Compensation", category: "Agriculture", benefit: "₹6,800/hectare for irrigated, ₹13,500/hectare for unirrigated crop loss", eligibility: "Farmers in officially drought-declared districts", link: "https://agriculture.gov.in", state: "All India", minIncome: 0, maxIncome: 999999 },
+  { id: 18, name: "National Scholarship Portal Scheme", category: "Education", benefit: "₹500-5,000/month scholarship for students", eligibility: "Students from minority/SC/ST/OBC communities with 50%+ marks", link: "https://scholarships.gov.in", state: "All India", minIncome: 0, maxIncome: 200000 },
+  { id: 19, name: "Atal Pension Yojana", category: "Pension", benefit: "Guaranteed pension ₹1,000-5,000/month after 60 years", eligibility: "Unorganized sector workers aged 18-40", link: "https://enps.nsdl.com", state: "All India", minIncome: 0, maxIncome: 999999 },
+  { id: 20, name: "PM Mudra Yojana (PMMY)", category: "Entrepreneurship", benefit: "Loans from ₹50,000 to ₹10 lakh for small businesses", eligibility: "Small/micro businesses seeking working capital", link: "https://mudra.org.in", state: "All India", minIncome: 0, maxIncome: 999999 },
+  { id: 21, name: "Beti Bachao Beti Padhao", category: "Women & Child", benefit: "Financial incentives + free education for girl child", eligibility: "Girl child born in targeted districts", link: "https://wcd.nic.in", state: "All India", minIncome: 0, maxIncome: 999999 },
+  { id: 22, name: "PM Garib Kalyan Ann Yojana", category: "Food Security", benefit: "5 kg free food grains per person per month", eligibility: "National Food Security Act beneficiaries", link: "https://dfpd.gov.in", state: "All India", minIncome: 0, maxIncome: 150000 },
+  { id: 23, name: "Rainfed Area Development Programme", category: "Agriculture", benefit: "Subsidy up to 50% for soil conservation and water harvesting", eligibility: "Farmers in notified rainfed districts", link: "https://agriculture.gov.in/rainfed", state: "All India", minIncome: 0, maxIncome: 500000 },
+  { id: 24, name: "PM SVANidhi (Street Vendors)", category: "Entrepreneurship", benefit: "Working capital loan ₹10,000 to ₹50,000 at low interest", eligibility: "Urban street vendors with vending certificate", link: "https://pmsvanidhi.mohua.gov.in", state: "All India", minIncome: 0, maxIncome: 300000 },
+  { id: 25, name: "Kerala Disaster Relief Fund", category: "Disaster Relief", benefit: "₹10,000 immediate relief + rehabilitation support", eligibility: "Kerala disaster-affected families", link: "https://kerala.gov.in/relief", state: "Kerala", minIncome: 0, maxIncome: 999999 },
 ];
 
-export async function GET() {
-  return NextResponse.json({ success: true, schemes: SCHEMES });
+export async function GET(req: NextRequest) {
+  const { searchParams } = new URL(req.url);
+  const query = searchParams.get('q') || '';
+  const category = searchParams.get('category') || '';
+  const income = parseInt(searchParams.get('income') || '0');
+  const disaster = searchParams.get('disaster') || '';
+
+  let filtered = SCHEMES_DB;
+
+  if (category) {
+    filtered = filtered.filter(s => s.category.toLowerCase().includes(category.toLowerCase()));
+  }
+  if (disaster) {
+    filtered = filtered.filter(s => 
+      s.name.toLowerCase().includes(disaster.toLowerCase()) || 
+      s.category.toLowerCase().includes('disaster')
+    );
+  }
+  if (income > 0) {
+    filtered = filtered.filter(s => income <= s.maxIncome);
+  }
+
+  return NextResponse.json({ schemes: filtered, total: filtered.length });
+}
+
+export async function POST(req: NextRequest) {
+  try {
+    const { query = '', income = 0, familySize = 1, state = 'All India', disaster = '' } = await req.json();
+
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+    
+    // Filter relevant schemes first
+    let relevant = SCHEMES_DB;
+    if (disaster) {
+      relevant = relevant.filter(s => s.category.includes('Disaster') || s.name.toLowerCase().includes(disaster.toLowerCase()));
+    }
+    if (income > 0) {
+      relevant = relevant.filter(s => income <= s.maxIncome);
+    }
+
+    const prompt = `You are an Indian government scheme expert. 
+User query: "${query}"
+User income: ₹${income}/year, Family size: ${familySize}, State: ${state}
+Available schemes: ${JSON.stringify(relevant.slice(0, 10).map(s => ({ name: s.name, benefit: s.benefit, eligibility: s.eligibility })))}
+
+Based on the user's profile and query, identify the TOP 3 most relevant schemes and explain WHY they qualify.
+Return a JSON array: [{ "scheme_name": "...", "eligibility_score": 85, "reason": "...", "next_step": "..." }]
+Keep reasons brief and practical.`;
+
+    const result = await model.generateContent(prompt);
+    const text = result.response.text().trim();
+    const jsonMatch = text.match(/\[[\s\S]*\]/);
+    
+    if (jsonMatch) {
+      const aiRecs = JSON.parse(jsonMatch[0]);
+      return NextResponse.json({ recommendations: aiRecs, all_schemes: relevant.slice(0, 15) });
+    }
+
+    return NextResponse.json({ recommendations: [], all_schemes: relevant.slice(0, 15) });
+  } catch {
+    return NextResponse.json({ recommendations: [], all_schemes: SCHEMES_DB.slice(0, 15) });
+  }
 }

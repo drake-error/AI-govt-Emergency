@@ -8,16 +8,25 @@
   --color-safe-green: #10b981;
 }
 
-body {
-  font-family: Arial, Helvetica, sans-serif;
+/* ===================== DARK MODE SUPPORT ===================== */
+:root {
+  color-scheme: light;
+}
+html.dark {
+  color-scheme: dark;
 }
 
-/* Animations */
+/* ===================== BASE TYPOGRAPHY ===================== */
+body {
+  font-family: 'Inter', Arial, Helvetica, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ===================== ANIMATIONS ===================== */
 @keyframes pulse-ring {
   0% { transform: scale(0.8); opacity: 0.5; }
   100% { transform: scale(1.5); opacity: 0; }
 }
-
 .animate-pulse-ring {
   animation: pulse-ring 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
 }
@@ -27,9 +36,75 @@ body {
   0%   { transform: translateX(100%); }
   100% { transform: translateX(-150%); }
 }
-
 .ticker-text {
   display: inline-block;
   white-space: nowrap;
-  animation: ticker-scroll 35s linear infinite;
+  animation: ticker-scroll 45s linear infinite;
+}
+
+/* ===================== SOS PULSE ANIMATION ===================== */
+@keyframes sos-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.6); }
+  50% { box-shadow: 0 0 0 20px rgba(220, 38, 38, 0); }
+}
+.sos-pulse {
+  animation: sos-pulse 2s ease-in-out infinite;
+}
+
+/* ===================== SCROLLBAR ===================== */
+.scrollbar-none::-webkit-scrollbar { display: none; }
+.scrollbar-none { -ms-overflow-style: none; scrollbar-width: none; }
+.scrollbar-thin::-webkit-scrollbar { width: 4px; height: 4px; }
+.scrollbar-thin::-webkit-scrollbar-thumb { background-color: rgba(148, 163, 184, 0.5); border-radius: 4px; }
+
+/* ===================== LEAFLET DARK MODE FIX ===================== */
+html.dark .leaflet-tile {
+  filter: brightness(0.85) saturate(0.9);
+}
+html.dark .leaflet-container {
+  background: #1e293b;
+}
+
+/* ===================== FADE IN ANIMATION ===================== */
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in-up {
+  animation: fade-in-up 0.4s ease-out forwards;
+}
+
+/* ===================== CARD HOVER LIFT ===================== */
+.card-hover {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+}
+html.dark .card-hover:hover {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+/* ===================== VOICE WAVE ANIMATION ===================== */
+@keyframes voice-wave {
+  0%, 100% { height: 6px; }
+  50% { height: 20px; }
+}
+.voice-bar {
+  width: 3px;
+  border-radius: 2px;
+  background: currentColor;
+  animation: voice-wave 0.8s ease-in-out infinite;
+}
+.voice-bar:nth-child(2) { animation-delay: 0.1s; }
+.voice-bar:nth-child(3) { animation-delay: 0.2s; }
+.voice-bar:nth-child(4) { animation-delay: 0.3s; }
+.voice-bar:nth-child(5) { animation-delay: 0.4s; }
+
+/* ===================== TRANSITION UTILITIES ===================== */
+* {
+  transition-property: background-color, border-color, color;
+  transition-duration: 200ms;
+  transition-timing-function: ease;
 }

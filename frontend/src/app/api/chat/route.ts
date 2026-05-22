@@ -1,36 +1,55 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { GoogleGenerativeAI } from '@google/generative-ai';
+
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+
+const LANGUAGE_NAMES: Record<string, string> = {
+  'en-IN': 'English', 'hi-IN': 'Hindi (हिंदी)', 'ta-IN': 'Tamil (தமிழ்)',
+  'te-IN': 'Telugu (తెలుగు)', 'kn-IN': 'Kannada (ಕನ್ನಡ)', 'ml-IN': 'Malayalam (മലയാളം)',
+  'bn-IN': 'Bengali (বাংলা)', 'mr-IN': 'Marathi (मराठी)', 'gu-IN': 'Gujarati (ગુજરાતી)',
+  'pa-IN': 'Punjabi (ਪੰਜਾਬੀ)', 'or-IN': 'Odia (ଓଡ଼ିଆ)', 'as-IN': 'Assamese (অসমীয়া)',
+  'ur-IN': 'Urdu (اردو)', 'sa-IN': 'Sanskrit (संस्कृतम्)', 'sd-IN': 'Sindhi (سنڌي)',
+  'kok-IN': 'Konkani (कोंकणी)', 'mni-IN': 'Manipuri (মৈতৈলোন্)', 'ne-IN': 'Nepali (नेपाली)',
+  'bho-IN': 'Bhojpuri (भोजपुरी)', 'mai-IN': 'Maithili (मैथिली)', 'ks-IN': 'Kashmiri (كٲشُر)',
+  'doi-IN': 'Dogri (डोगरी)',
+};
 
 export async function POST(req: NextRequest) {
   try {
     const { message = '', lang = 'en-IN' } = await req.json();
-    const userMsg = message.toLowerCase();
+    const languageName = LANGUAGE_NAMES[lang] || 'English';
 
-    let response =
-      'I am the AI E-Governance Citizen Assistant. Your request has been noted. Please contact 112 for immediate emergencies.';
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
-    if (userMsg.includes('shelter')) {
-      response =
-        'The nearest verified relief shelter is at the District Community Hall, 2.4 km away. Beds and food are available.';
-    } else if (userMsg.includes('mla') || userMsg.includes('power')) {
-      response =
-        'Your ward MLA is Mr. Sharma (Ph: 9876543210). The power cutoff is due to precautionary grid isolation and will be restored in 4 hours.';
-    } else if (
-      userMsg.includes('scheme') ||
-      userMsg.includes('relief') ||
-      userMsg.includes('compensation')
-    ) {
-      response =
-        'Under the Cyclone Relief Scheme, affected citizens are eligible for ₹10,000 ex-gratia. Apply via the Citizen Distress Hub with your Aadhaar number.';
-    } else if (userMsg.includes('sos') || userMsg.includes('emergency') || userMsg.includes('help')) {
-      response =
-        'Emergency flagged. Dial 112 immediately. SDRF dispatch has been notified. Share your location using the map feature on the home page.';
-    } else if (userMsg.includes('food') || userMsg.includes('water') || userMsg.includes('ration')) {
-      response =
-        'Free food and water distribution is active at 14 government schools in your district. Show your Aadhaar card to collect your relief kit.';
-    }
+    const systemPrompt = `You are an official AI assistant for India's National Disaster Management Authority (NDMA). 
+Your primary role is to help Indian citizens during emergencies, natural disasters, and to access government schemes and services.
 
+CRITICAL LANGUAGE RULE: The user is communicating in ${languageName}. You MUST reply ENTIRELY in ${languageName}. 
+If the user writes in Tamil, reply in Tamil. If Hindi, reply in Hindi. Match their language EXACTLY.
+Do NOT mix languages. Do NOT add translations. Just reply naturally in the same language.
+
+KNOWLEDGE BASE:
+- Emergency numbers: Police 100, Fire 101, Ambulance 102, Disaster 108, NDMA 1078, All-in-one 112
+- Government schemes: PMFBY (crop insurance), PMAY (housing), MGNREGA (employment), PMKSY (irrigation), PM-KISAN
+- Disaster relief: Cyclone, Flood, Earthquake, Drought ex-gratia payments available via state portals
+- Nearby services: Tell user to use the SOS page to find nearest police, fire, hospital with live location
+- Documents needed: Aadhaar card, BPL card, bank passbook, land records for scheme applications
+
+Be empathetic, clear, and helpful. For life-threatening emergencies, ALWAYS mention calling 112 immediately.
+Keep responses concise (2-4 sentences). Be practical and actionable.`;
+
+    const result = await model.generateContent([
+      { text: systemPrompt },
+      { text: `User message: ${message}` }
+    ]);
+
+    const response = result.response.text();
     return NextResponse.json({ response });
-  } catch {
-    return NextResponse.json({ detail: 'Invalid request body.' }, { status: 400 });
+  } catch (error) {
+    console.error('Gemini chat error:', error);
+    return NextResponse.json(
+      { response: 'I am experiencing a temporary issue. For emergencies, please call 112 immediately.' },
+      { status: 200 }
+    );
   }
 }
